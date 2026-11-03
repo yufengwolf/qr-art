@@ -211,7 +211,7 @@ function fillVersionOptions() {
 function updateSliderLabels() {
   $('scaleVal').textContent = $('scale').value;
   $('contrastVal').textContent = parseFloat($('contrast').value).toFixed(1);
-  $('brightnessVal').textContent = parseFloat($brightness.value).toFixed(1);
+  $('brightnessVal').textContent = parseFloat($('brightness').value).toFixed(1);
 }
 
 let currentCanvas = null; // 供下载使用
@@ -294,7 +294,10 @@ function download() {
   }, 'image/png');
 }
 
+let initialized = false;
 function init() {
+  if (initialized) return; // 幂等保护：避免重复触发导致事件重复绑定
+  initialized = true;
   fillVersionOptions();
   updateSliderLabels();
 
