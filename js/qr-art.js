@@ -42,7 +42,7 @@ const MAX_BYTES = 1200; // 超出则字节计数变红（仅提示，不拦截�
  *                （animated 也可由 .gif 后缀自动判定；黑白/彩色需手动标注）
  */
 const SHOWCASE_ITEMS = [
-  { src: 'showcase/demo-1.png', captionZh: '渐变星空 · 彩色', captionEn: 'Gradient starry · Color', tags: ['color', 'static'] },
+  { src: 'showcase/demo-1.png', captionZh: '幸福美满 · 彩色', captionEn: 'Happy family · Color', tags: ['color', 'static'] },
   { src: 'showcase/demo-2.gif', captionZh: '流光动画 · 动态', captionEn: 'Flowing light · Animated', tags: ['color', 'animated'] },
   { src: 'showcase/demo-3.png', captionZh: '水墨留白 · 黑白', captionEn: 'Ink minimal · B&W', tags: ['bw', 'static'] },
   { src: 'showcase/demo-4.png', captionZh: '品牌 Logo 叠加', captionEn: 'Logo overlay', tags: ['color', 'static'] },
@@ -313,7 +313,7 @@ const I18N = {
     'h1': '艺术二维码生成器',
     'subtitle': '纯静态 · 本地生成 · 不上传任何数据',
     'content.label': '内容（网址 / 文字 / 任意文本）',
-    'content.placeholder': 'https://example.com 或 你好世界',
+    'content.placeholder': 'https://qr-art.pages.dev/ 或 你好世界',
     'content.hint': '内容最多约 500 个汉字；越短越易扫。',
     'quick.link': '链接',
     'quick.wechat': '微信',
@@ -371,7 +371,7 @@ const I18N = {
     'h1': 'Art QR Generator',
     'subtitle': 'Static · Runs locally · No data uploaded',
     'content.label': 'Content (URL / text / anything)',
-    'content.placeholder': 'https://example.com or Hello World',
+    'content.placeholder': 'https://qr-art.pages.dev/ or Hello World',
     'content.hint': 'About 500 Chinese chars max; shorter scans better.',
     'quick.link': 'Link',
     'quick.wechat': 'WeChat',

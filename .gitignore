@@ -3,6 +3,8 @@ node_modules/
 .DS_Store
 *.log
 
-# 本地生成的二维码产物
+# 本地生成的二维码产物（展示素材 showcase/ 除外）
 *.png
 !js/qrcode.min.js
+!showcase/*.png
+!showcase/*.gif
