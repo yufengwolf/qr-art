@@ -193,6 +193,97 @@ function render(canvas, qr, n, ver, opts) {
       }
     }
   }
+
+  // Logo 叠加（静态 / 动态帧通用）
+  if (opts.logo) drawLogo(ctx, size, opts.logoRatio || 0.22, opts.logo);
+}
+
+/* ---------------- 动态 GIF / Logo 支持 ---------------- */
+
+/** 把 Logo 居中叠加到二维码上（白底圆角背板 + contain 缩放）。 */
+function drawLogo(ctx, size, ratio, logo) {
+  const lw = size * ratio;
+  const pad = lw * 0.12;
+  const box = lw + pad * 2;
+  const x = (size - box) / 2;
+  const y = (size - box) / 2;
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, box, box, box * 0.2);
+    ctx.fill();
+  } else {
+    ctx.fillRect(x, y, box, box);
+  }
+  const ar = (logo.width && logo.height) ? logo.width / logo.height : 1;
+  let dw, dh;
+  if (ar >= 1) { dw = lw; dh = lw / ar; } else { dh = lw; dw = lw * ar; }
+  ctx.drawImage(logo, (size - dw) / 2, (size - dh) / 2, dw, dh);
+  ctx.restore();
+}
+
+/**
+ * 解码 GIF：返回 [{ canvas, delay }]。
+ * - delay 由 GIF 的 1/100 秒单位换算为毫秒，并设最小下限（避免过快/为 0）。
+ * - 处理 disposal=2（还原背景）以正确合成逐帧画面；disposal 0/1 视为「保留」。
+ */
+function decodeGifFrames(buffer) {
+  const reader = new GifReader(new Uint8Array(buffer));
+  const W = reader.width, H = reader.height;
+  const n = reader.numFrames();
+  const frames = [];
+  const acc = new Uint8ClampedArray(W * H * 4); // 初始全透明
+  let prevDisposal = 0, prevRect = null;
+  for (let i = 0; i < n; i++) {
+    const info = reader.frameInfo(i);
+    if (i > 0 && prevDisposal === 2 && prevRect) {
+      for (let yy = prevRect.y; yy < prevRect.y + prevRect.height; yy++) {
+        const start = (yy * W + prevRect.x) * 4;
+        acc.fill(0, start, start + prevRect.width * 4);
+      }
+    }
+    reader.decodeAndBlitFrameRGBA(i, acc);
+    const copy = new Uint8ClampedArray(acc);
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    cv.getContext('2d').putImageData(new ImageData(copy, W, H), 0, 0);
+    let d = info.delay * 10;
+    if (d < 30) d = (d === 0 ? 100 : 30);
+    frames.push({ canvas: cv, delay: d });
+    prevDisposal = info.disposal;
+    prevRect = { x: info.x, y: info.y, width: info.width, height: info.height };
+  }
+  return frames;
+}
+
+/** 用 gif.js 把多帧画布合成为动画 GIF 的 Blob。需通过 http 服务器打开（worker 限制）。 */
+function encodeAnimatedGif(canvases, delays, size, onDone, onError) {
+  let gif;
+  try {
+    gif = new GIF({ workers: 2, quality: 10, repeat: 0, width: size, height: size, workerScript: 'js/gif.worker.js' });
+  } catch (e) { onError && onError(e); return; }
+  canvases.forEach((cv, i) => gif.addFrame(cv, { delay: delays[i], copy: true }));
+  gif.on('finished', (blob) => onDone(blob));
+  gif.on('abort', () => onError && onError(new Error('aborted')));
+  try { gif.render(); } catch (e) { onError && onError(e); }
+}
+
+function stopAnim() {
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+}
+
+/** 在预览 canvas 上循环播放逐帧画面（按各帧自身 delay）。 */
+function playFrames(canvases, delays) {
+  stopAnim();
+  const ctx = $('canvas').getContext('2d');
+  let i = 0;
+  const step = () => {
+    ctx.drawImage(canvases[i], 0, 0);
+    animTimer = setTimeout(step, delays[i]);
+    i = (i + 1) % canvases.length;
+  };
+  step();
 }
 
 /* ---------------- 国际化 (i18n) ---------------- */
@@ -212,8 +303,10 @@ const I18N = {
     'quick.wechat': '微信',
     'quick.phone': '电话',
     'quick.email': '邮箱',
-    'pic.label': '背景图（可选，留空为普通二维码）',
+    'pic.label': '背景图（可选；支持 GIF 动态二维码）',
     'pic.colorized': '彩色（不勾则为灰度艺术二维码）',
+    'logo.label': 'Logo 叠加（可选，居中显示）',
+    'logo.ratio': 'Logo 大小：',
     'level.label': '容错等级',
     'level.L': 'L（低 7%）',
     'level.M': 'M（中 15%）',
@@ -233,7 +326,13 @@ const I18N = {
     'err.tooLong': '内容过长或版本不合适：请改用「自动」版本，或降低容错等级。',
     'status.default': '输入内容后，点击「生成」即可生成二维码。',
     'status.generated': '二维码已生成，可下载 PNG。',
+    'status.encoding': '正在合成动画 GIF…',
     'meta.fmt': '版本 {ver} · 尺寸 {count}×{count} 模块 · 容错 {ecl}',
+    'meta.anim': '动画 GIF · {n} 帧 · 尺寸 {count}×{count} 模块 · 容错 {ecl}',
+    'err.gif': 'GIF 合成失败：请通过本地服务器(http)打开本页，勿用 file://',
+    'err.gifdecode': 'GIF 解码失败：',
+    'download': '下载 PNG',
+    'download.gif': '下载 GIF',
     'lang.toggle': 'EN',
   },
   en: {
@@ -250,8 +349,10 @@ const I18N = {
     'quick.wechat': 'WeChat',
     'quick.phone': 'Phone',
     'quick.email': 'Email',
-    'pic.label': 'Background image (optional; plain QR if empty)',
+    'pic.label': 'Background image (optional; GIF → animated QR)',
     'pic.colorized': 'Colorized (grayscale art QR if unchecked)',
+    'logo.label': 'Logo overlay (optional, centered)',
+    'logo.ratio': 'Logo size: ',
     'level.label': 'Error correction',
     'level.L': 'L (low 7%)',
     'level.M': 'M (medium 15%)',
@@ -271,7 +372,13 @@ const I18N = {
     'err.tooLong': 'Content too long or version unsupported: switch to "Auto" or lower error correction.',
     'status.default': 'Enter content, then click "Generate" to create a QR code.',
     'status.generated': 'QR code generated — PNG download ready.',
+    'status.encoding': 'Compositing animated GIF…',
     'meta.fmt': 'Version {ver} · {count}×{count} modules · Level {ecl}',
+    'meta.anim': 'Animated GIF · {n} frames · {count}×{count} modules · Level {ecl}',
+    'err.gif': 'GIF encoding failed: open this page via a local server (http), not file://',
+    'err.gifdecode': 'GIF decode failed: ',
+    'download': 'Download PNG',
+    'download.gif': 'Download GIF',
     'lang.toggle': '中',
   },
 };
@@ -324,6 +431,8 @@ function updateSliderLabels() {
   $('scaleVal').textContent = $('scale').value;
   $('contrastVal').textContent = parseFloat($('contrast').value).toFixed(1);
   $('brightnessVal').textContent = parseFloat($('brightness').value).toFixed(1);
+  const lr = $('logoRatio');
+  if (lr) $('logoRatioVal').textContent = lr.value + '%';
 }
 
 function updateContentCount() {
@@ -334,6 +443,11 @@ function updateContentCount() {
 }
 
 let currentCanvas = null; // 供下载使用
+let currentBlob = null;    // 动画 GIF 的 Blob（静态时为 null，走 currentCanvas）
+let currentBlobUrl = null; // 对应 object URL
+let currentBlobName = 'qrcode.png';
+let animTimer = null;      // 预览播放定时器
+let genToken = 0;          // 防止过期的异步编码结果覆盖最新结果
 
 function setStatus(msg, isError) {
   const el = $('status');
@@ -352,6 +466,7 @@ function generate() {
   const colorized = $('colorized').checked;
   const contrast = parseFloat($('contrast').value);
   const brightness = parseFloat($('brightness').value);
+  const logoRatio = parseFloat($('logoRatio').value) / 100;
 
   let matrix;
   try {
@@ -363,16 +478,52 @@ function generate() {
   const { qr, version: realVer, count } = matrix;
 
   const picImg = $('picPreview').dataset.loaded === '1' ? window.__bgImg : null;
+  const frames = window.__bgFrames;
+  const logo = window.__logoImg;
+  const optsBase = { scale, colorized, contrast, brightness, logo, logoRatio };
 
-  render($('canvas'), qr, count, realVer, {
-    scale,
-    img: picImg,
-    colorized,
-    contrast,
-    brightness,
-  });
+  const myToken = ++genToken;
+  stopAnim();
 
+  if (frames && frames.length > 1) {
+    // 动态 GIF 路径：逐帧渲染艺术二维码，再合成为动画 GIF
+    const S = scale;
+    const size = (count + 2 * QUIET) * S;
+    const canvases = [];
+    const delays = [];
+    for (const f of frames) {
+      const cv = document.createElement('canvas');
+      render(cv, qr, count, realVer, Object.assign({}, optsBase, { img: f.canvas }));
+      canvases.push(cv);
+      delays.push(f.delay);
+    }
+    playFrames(canvases, delays);
+    setStatus(t('status.encoding'));
+    $('download').textContent = t('download.gif');
+    $('download').disabled = true;
+    $('meta').textContent = t('meta.anim', { n: canvases.length, count, ecl });
+    encodeAnimatedGif(canvases, delays, size, (blob) => {
+      if (myToken !== genToken) return; // 已有更新的生成请求，丢弃过期结果
+      currentBlob = blob;
+      currentBlobName = 'qrcode.gif';
+      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+      currentBlobUrl = URL.createObjectURL(blob);
+      $('download').disabled = false;
+      setStatus(t('status.generated'));
+    }, (err) => {
+      if (myToken !== genToken) return;
+      $('download').disabled = true;
+      setStatus(t('err.gif') + (err && err.message ? ' (' + err.message + ')' : ''), true);
+    });
+    return;
+  }
+
+  // 静态路径（无背景 / 静态背景图）
+  render($('canvas'), qr, count, realVer, Object.assign({}, optsBase, { img: picImg }));
   currentCanvas = $('canvas');
+  currentBlob = null;
+  if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+  $('download').textContent = t('download');
   $('download').disabled = false;
   $('meta').textContent = t('meta.fmt', { ver: realVer, count, ecl });
   setStatus(t('status.generated'));
@@ -387,13 +538,41 @@ function setupPicturePreview() {
       preview.hidden = true;
       preview.dataset.loaded = '0';
       window.__bgImg = null;
+      window.__bgFrames = null;
       return;
     }
+    if (file.type === 'image/gif') {
+      // GIF：解码为逐帧画布，>1 帧走动画路径
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const frames = decodeGifFrames(ev.target.result);
+          if (frames.length > 1) {
+            window.__bgFrames = frames;
+            window.__bgImg = null;
+          } else {
+            window.__bgFrames = null;
+            window.__bgImg = frames[0].canvas;
+          }
+          preview.src = frames[0].canvas.toDataURL();
+          preview.hidden = false;
+          preview.dataset.loaded = '1';
+        } catch (e) {
+          setStatus(t('err.gifdecode') + (e && e.message ? e.message : ''), true);
+          window.__bgFrames = null;
+          window.__bgImg = null;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+    // 静态图
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
         window.__bgImg = img;
+        window.__bgFrames = null;
         preview.src = ev.target.result;
         preview.hidden = false;
         preview.dataset.loaded = '1';
@@ -404,16 +583,39 @@ function setupPicturePreview() {
   });
 }
 
+function setupLogoPreview() {
+  const input = $('logo');
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (!file) { window.__logoImg = null; return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => { window.__logoImg = img; };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function download() {
-  if (!currentCanvas) return;
-  currentCanvas.toBlob((blob) => {
-    const url = URL.createObjectURL(blob);
+  if (currentBlob && currentBlobUrl) {
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'qrcode.png';
+    a.href = currentBlobUrl;
+    a.download = currentBlobName;
     a.click();
-    URL.revokeObjectURL(url);
-  }, 'image/png');
+    return;
+  }
+  if (currentCanvas) {
+    currentCanvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = currentBlobName;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  }
 }
 
 let initialized = false;
@@ -448,11 +650,12 @@ function init() {
   updateSliderLabels();
   updateContentCount();
 
-  ['scale', 'contrast', 'brightness'].forEach((id) => {
+  ['scale', 'contrast', 'brightness', 'logoRatio'].forEach((id) => {
     $(id).addEventListener('input', updateSliderLabels);
   });
 
   setupPicturePreview();
+  setupLogoPreview();
   $('generate').addEventListener('click', generate);
   $('download').addEventListener('click', download);
 
@@ -467,7 +670,7 @@ function init() {
 
   // 输入变化后自动重生成（防抖）
   let debounceTimer;
-  const autoInputs = ['level', 'version', 'scale', 'colorized', 'contrast', 'brightness'];
+  const autoInputs = ['level', 'version', 'scale', 'colorized', 'contrast', 'brightness', 'logoRatio'];
   autoInputs.forEach((id) => {
     $(id).addEventListener('change', () => {
       clearTimeout(debounceTimer);
@@ -480,6 +683,7 @@ function init() {
     debounceTimer = setTimeout(generate, 350);
   });
   $('picture').addEventListener('change', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(generate, 400); });
+  $('logo').addEventListener('change', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(generate, 400); });
 
   // 首次生成 + 默认提示
   setStatus(t('status.default'));

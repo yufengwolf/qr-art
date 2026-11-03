@@ -58,14 +58,27 @@
 
           <div class="field">
             <label class="label" for="picture">
-              <span data-i18n="pic.label">背景图（可选，留空为普通二维码）</span>
+              <span data-i18n="pic.label">背景图（可选；支持 GIF 动态二维码）</span>
             </label>
-            <input type="file" id="picture" accept="image/*" />
+            <input type="file" id="picture" accept="image/png,image/jpeg,image/gif,image/webp" />
             <div class="thumb-wrap"><img id="picPreview" alt="背景图预览" hidden /></div>
             <label class="checkbox">
               <input type="checkbox" id="colorized" />
               <span data-i18n="pic.colorized">彩色（不勾则为灰度艺术二维码）</span>
             </label>
+          </div>
+
+          <div class="field">
+            <label class="label" for="logo">
+              <span data-i18n="logo.label">Logo 叠加（可选，居中显示）</span>
+            </label>
+            <input type="file" id="logo" accept="image/png,image/jpeg,image/webp" />
+            <div class="logo-ratio">
+              <label for="logoRatio">
+                <span data-i18n="logo.ratio">Logo 大小：</span><span id="logoRatioVal">22%</span>
+              </label>
+              <input type="range" id="logoRatio" min="10" max="35" step="1" value="22" />
+            </div>
           </div>
 
           <div class="settings">
@@ -133,6 +146,8 @@
   </footer>
 
   <script src="js/qrcode.min.js"></script>
+  <script src="js/omggif.js"></script>
+  <script src="js/gif.js"></script>
   <script src="js/qr-art.js"></script>
 </body>
 </html>

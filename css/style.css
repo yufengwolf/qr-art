@@ -168,6 +168,9 @@ input[type="file"]::file-selector-button {
 .checkbox { display: inline-flex; align-items: center; gap: 9px; color: var(--text-soft); cursor: pointer; }
 .checkbox input { width: 16px; height: 16px; accent-color: var(--accent); }
 
+.logo-ratio { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.logo-ratio label { color: var(--text-soft); font-size: 0.82rem; }
+
 .settings {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 6px;
   border-top: 1px solid var(--border); padding-top: 16px;
