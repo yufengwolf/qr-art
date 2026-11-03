@@ -32,6 +32,22 @@ const ALIG = [
 const QUIET = 4; // 静默区（模块数），符合 QR 规范
 const MAX_BYTES = 1200; // 超出则字节计数变红（仅提示，不拦截）
 
+/**
+ * 作品展示区配置 —— 你只需往这里加图片，无需改其它代码。
+ * 把二维码图片放到 showcase/ 目录，然后在此登记一项即可：
+ *   - src:       相对路径（相对 index.html），如 'showcase/demo-1.png' 或 'showcase/demo-1.gif'
+ *   - captionZh: 中文说明
+ *   - captionEn: 英文说明
+ *   - tags:      ['static' | 'animated'] + ['bw' | 'color']
+ *                （animated 也可由 .gif 后缀自动判定；黑白/彩色需手动标注）
+ */
+const SHOWCASE_ITEMS = [
+  { src: 'showcase/demo-1.png', captionZh: '渐变星空 · 彩色', captionEn: 'Gradient starry · Color', tags: ['color', 'static'] },
+  { src: 'showcase/demo-2.gif', captionZh: '流光动画 · 动态', captionEn: 'Flowing light · Animated', tags: ['color', 'animated'] },
+  { src: 'showcase/demo-3.png', captionZh: '水墨留白 · 黑白', captionEn: 'Ink minimal · B&W', tags: ['bw', 'static'] },
+  { src: 'showcase/demo-4.png', captionZh: '品牌 Logo 叠加', captionEn: 'Logo overlay', tags: ['color', 'static'] },
+];
+
 /** 格式信息区（format information）模块判定。 */
 function isFormatInfo(r, c, n) {
   if (r === 8 && c <= 8 && c !== 6) return true; // 顶左：第8行 0-8 列（跳过定时 col6）
@@ -334,6 +350,18 @@ const I18N = {
     'download': '下载 PNG',
     'download.gif': '下载 GIF',
     'lang.toggle': 'EN',
+    'nav.gallery': '展示',
+    'gallery.crumbs': '案例 / GALLERY',
+    'gallery.h1': '作品展示',
+    'gallery.subtitle': '各种风格的艺术二维码示例（静态 / 动态 / 黑白 / 彩色）。',
+    'gallery.pending': '图片待添加',
+    'gallery.pendingHint': '把对应文件放到 showcase/ 目录即可显示。',
+    'gallery.tag.animated': '动态',
+    'gallery.tag.static': '静态',
+    'gallery.tag.bw': '黑白',
+    'gallery.tag.color': '彩色',
+    'gallery.empty': '展示区待填充',
+    'gallery.emptyHint': '在 js/qr-art.js 的 SHOWCASE_ITEMS 中登记你的二维码图片路径即可。',
   },
   en: {
     'title': 'Art QR Generator · QR Art Studio',
@@ -380,6 +408,18 @@ const I18N = {
     'download': 'Download PNG',
     'download.gif': 'Download GIF',
     'lang.toggle': '中',
+    'nav.gallery': 'Gallery',
+    'gallery.crumbs': 'CASES / GALLERY',
+    'gallery.h1': 'Gallery',
+    'gallery.subtitle': 'Art QR examples in various styles (static / animated / B&W / color).',
+    'gallery.pending': 'Image pending',
+    'gallery.pendingHint': 'Drop the matching file into the showcase/ folder to display it.',
+    'gallery.tag.animated': 'Animated',
+    'gallery.tag.static': 'Static',
+    'gallery.tag.bw': 'B&W',
+    'gallery.tag.color': 'Color',
+    'gallery.empty': 'Gallery empty',
+    'gallery.emptyHint': 'Register your QR image paths in SHOWCASE_ITEMS (js/qr-art.js) to show them here.',
   },
 };
 
@@ -618,6 +658,58 @@ function download() {
   }
 }
 
+function renderShowcase() {
+  const grid = $('showcaseGrid');
+  if (!grid) return;
+
+  if (!SHOWCASE_ITEMS || SHOWCASE_ITEMS.length === 0) {
+    grid.innerHTML =
+      '<div class="showcase-empty">' +
+        '<p class="se-title">' + t('gallery.empty') + '</p>' +
+        '<p class="se-hint">' + t('gallery.emptyHint') + '</p>' +
+      '</div>';
+    return;
+  }
+
+  grid.innerHTML = '';
+  SHOWCASE_ITEMS.forEach((item) => {
+    const tags = (item.tags || []).slice();
+    const isGif = (item.src || '').toLowerCase().endsWith('.gif') || tags.indexOf('animated') !== -1;
+    if (tags.indexOf('animated') === -1 && tags.indexOf('static') === -1) tags.push(isGif ? 'animated' : 'static');
+
+    const card = document.createElement('figure');
+    card.className = 'showcase-card';
+
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = item.captionZh || item.captionEn || 'QR';
+    img.src = item.src;
+    img.addEventListener('error', () => {
+      card.classList.add('is-pending');
+      const ph = document.createElement('div');
+      ph.className = 'showcase-pending';
+      ph.innerHTML =
+        '<span class="pending-plus">+</span>' +
+        '<span class="pending-title">' + t('gallery.pending') + '</span>' +
+        '<code class="pending-src">' + item.src + '</code>' +
+        '<span class="pending-hint">' + t('gallery.pendingHint') + '</span>';
+      if (img.parentNode) img.parentNode.replaceChild(ph, img);
+    });
+
+    const captionText = currentLang === 'zh'
+      ? (item.captionZh || item.captionEn || '')
+      : (item.captionEn || item.captionZh || '');
+    const badges = tags.map((tag) => '<span class="badge badge-' + tag + '">' + t('gallery.tag.' + tag) + '</span>').join('');
+
+    const figcaption = document.createElement('figcaption');
+    figcaption.innerHTML = '<div class="badges">' + badges + '</div><p class="cap">' + captionText + '</p>';
+
+    card.appendChild(img);
+    card.appendChild(figcaption);
+    grid.appendChild(card);
+  });
+}
+
 let initialized = false;
 function init() {
   if (initialized) return; // 幂等保护：避免重复触发导致事件重复绑定
@@ -643,6 +735,7 @@ function init() {
     currentLang = currentLang === 'zh' ? 'en' : 'zh';
     try { localStorage.setItem('yf-lang', currentLang); } catch (e) {}
     applyLang();
+    renderShowcase();
     generate(); // 刷新动态文案（状态/版本信息/字节数）
   });
 
@@ -684,6 +777,9 @@ function init() {
   });
   $('picture').addEventListener('change', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(generate, 400); });
   $('logo').addEventListener('change', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(generate, 400); });
+
+  // 作品展示区
+  renderShowcase();
 
   // 首次生成 + 默认提示
   setStatus(t('status.default'));

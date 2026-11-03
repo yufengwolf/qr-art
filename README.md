@@ -9,6 +9,7 @@
 - 🔤 支持中文等多语言（UTF-8），界面中英文一键切换
 - 🔒 全程本地，图片不上传服务器
 - 📦 单文件可部署，双击 `index.html` 即用
+- 🖼️ **作品展示区**：在页面底部集中展示你的艺术二维码作品（静态 / 动态 GIF / 黑白 / 彩色），由配置数组驱动
 
 ## 原理（与 amazing-qr 的对应关系）
 
@@ -55,6 +56,8 @@ qr-art/
 │   ├── omggif.js     # GIF 解码（MIT，已内嵌）
 │   ├── gif.js        # GIF 编码（含 gif.worker.js，MIT，已内嵌）
 │   └── qr-art.js     # 艺术融合层 + 交互逻辑
+├── showcase/          # 作品展示区图片目录（你生成的二维码放这里）
+│   └── .gitkeep
 └── README.md
 ```
 
@@ -67,6 +70,27 @@ qr-art/
 - 版本：自动 或 1–40
 - 清晰度：像素/模块（4–20）
 - 彩色开关、对比度、亮度（高级）
+
+## 作品展示区（Gallery）
+
+页面底部有一个「作品展示」区块，用于集中陈列各种风格的艺术二维码（静态图、动态 GIF、黑白、彩色）。**你只需提供图片，无需改任何渲染逻辑**：
+
+1. 把二维码图片放进 `showcase/` 目录（如 `showcase/demo-1.png`、`showcase/demo-2.gif`）。
+2. 在 `js/qr-art.js` 顶部的 `SHOWCASE_ITEMS` 数组里登记一项：
+
+```js
+{ src: 'showcase/demo-1.png', captionZh: '渐变星空 · 彩色', captionEn: 'Gradient starry · Color', tags: ['color', 'static'] },
+```
+
+字段说明：
+
+- `src`：相对 `index.html` 的路径
+- `captionZh` / `captionEn`：中 / 英文说明（随语言切换）
+- `tags`：`['static' | 'animated']` + `['bw' | 'color']`
+  - `animated` 也可由 `.gif` 后缀自动判定
+  - 黑白 / 彩色无法自动识别，需手动标注 `bw` / `color`，会显示为角标
+
+图片未找到时，卡片会显示「待添加」占位（带文件名），把对应文件丢进 `showcase/` 即自动显示；数组为空时显示引导文案。
 
 ## License
 
