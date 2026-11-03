@@ -1,5 +1,5 @@
 /* QR Art Studio
- * 艺术二维码生成器（纯前端）
+ * 艺术二维码生成器（纯前端，中英文双语）
  *
  * 设计来源：amazing-qr 的「艺术融合」思路——只把背景图覆盖到非保留模块
  * （定位/定时/对齐图案 + 每个模块的中心采样点），从而既好看又能扫。
@@ -11,7 +11,7 @@
  * 本文件职责：
  *   1. 调内核算出模块矩阵
  *   2. 自研艺术融合层（reserved 区域 + 中心采样 + 背景图融合）+ Canvas 渲染
- *   3. UI 绑定
+ *   3. i18n + UI 绑定
  */
 
 // 对齐图案中心坐标表（amazing-qr constant.alig_location，索引 = ver-2）
@@ -30,6 +30,7 @@ const ALIG = [
 ];
 
 const QUIET = 4; // 静默区（模块数），符合 QR 规范
+const MAX_BYTES = 1200; // 超出则字节计数变红（仅提示，不拦截）
 
 /** 格式信息区（format information）模块判定。 */
 function isFormatInfo(r, c, n) {
@@ -194,6 +195,117 @@ function render(canvas, qr, n, ver, opts) {
   }
 }
 
+/* ---------------- 国际化 (i18n) ---------------- */
+
+const I18N = {
+  zh: {
+    'title': '艺术二维码生成器 · QR Art Studio',
+    'brand': '御风 YUFENG',
+    'nav.home': '首页',
+    'crumbs': '工具 / QR ART',
+    'h1': '艺术二维码生成器',
+    'subtitle': '纯静态 · 本地生成 · 不上传任何数据',
+    'content.label': '内容（网址 / 文字 / 任意文本）',
+    'content.placeholder': 'https://example.com 或 你好世界',
+    'content.hint': '内容最多约 500 个汉字；越短越易扫。',
+    'quick.link': '链接',
+    'quick.wechat': '微信',
+    'quick.phone': '电话',
+    'quick.email': '邮箱',
+    'pic.label': '背景图（可选，留空为普通二维码）',
+    'pic.colorized': '彩色（不勾则为灰度艺术二维码）',
+    'level.label': '容错等级',
+    'level.L': 'L（低 7%）',
+    'level.M': 'M（中 15%）',
+    'level.Q': 'Q（较高 25%）',
+    'level.H': 'H（高 30%）',
+    'version.label': '版本',
+    'version.auto': '自动',
+    'scale.label': '清晰度（像素/模块）：',
+    'advanced': '高级：图像调节',
+    'contrast.label': '对比度：',
+    'brightness.label': '亮度：',
+    'generate': '生成',
+    'download': '下载 PNG',
+    'footer': '全部在浏览器本地完成，图片不会离开你的电脑。',
+    'unit.bytes': '字节',
+    'err.empty': '请输入要生成二维码的内容',
+    'err.tooLong': '内容过长或版本不合适：请改用「自动」版本，或降低容错等级。',
+    'status.default': '输入内容后，点击「生成」即可生成二维码。',
+    'status.generated': '二维码已生成，可下载 PNG。',
+    'meta.fmt': '版本 {ver} · 尺寸 {count}×{count} 模块 · 容错 {ecl}',
+    'lang.toggle': 'EN',
+  },
+  en: {
+    'title': 'Art QR Generator · QR Art Studio',
+    'brand': 'YUFENG',
+    'nav.home': 'Home',
+    'crumbs': 'TOOL / QR ART',
+    'h1': 'Art QR Generator',
+    'subtitle': 'Static · Runs locally · No data uploaded',
+    'content.label': 'Content (URL / text / anything)',
+    'content.placeholder': 'https://example.com or Hello World',
+    'content.hint': 'About 500 Chinese chars max; shorter scans better.',
+    'quick.link': 'Link',
+    'quick.wechat': 'WeChat',
+    'quick.phone': 'Phone',
+    'quick.email': 'Email',
+    'pic.label': 'Background image (optional; plain QR if empty)',
+    'pic.colorized': 'Colorized (grayscale art QR if unchecked)',
+    'level.label': 'Error correction',
+    'level.L': 'L (low 7%)',
+    'level.M': 'M (medium 15%)',
+    'level.Q': 'Q (high 25%)',
+    'level.H': 'H (highest 30%)',
+    'version.label': 'Version',
+    'version.auto': 'Auto',
+    'scale.label': 'Resolution (px/module): ',
+    'advanced': 'Advanced: image tuning',
+    'contrast.label': 'Contrast: ',
+    'brightness.label': 'Brightness: ',
+    'generate': 'Generate',
+    'download': 'Download PNG',
+    'footer': 'Everything runs locally in your browser. Images never leave your device.',
+    'unit.bytes': 'bytes',
+    'err.empty': 'Please enter the content to encode',
+    'err.tooLong': 'Content too long or version unsupported: switch to "Auto" or lower error correction.',
+    'status.default': 'Enter content, then click "Generate" to create a QR code.',
+    'status.generated': 'QR code generated — PNG download ready.',
+    'meta.fmt': 'Version {ver} · {count}×{count} modules · Level {ecl}',
+    'lang.toggle': '中',
+  },
+};
+
+let currentLang = 'zh';
+
+function t(key, vars) {
+  let s = (I18N[currentLang] && I18N[currentLang][key] != null)
+    ? I18N[currentLang][key]
+    : (I18N.zh[key] != null ? I18N.zh[key] : key);
+  if (vars) {
+    for (const k in vars) {
+      s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]);
+    }
+  }
+  return s;
+}
+
+function applyLang() {
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+  document.title = t('title');
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  const lt = document.getElementById('lang-toggle');
+  if (lt) {
+    lt.textContent = t('lang.toggle');
+    lt.setAttribute('aria-label', t('lang.toggle'));
+  }
+}
+
 /* ---------------- UI 绑定 ---------------- */
 
 const $ = (id) => document.getElementById(id);
@@ -214,16 +326,25 @@ function updateSliderLabels() {
   $('brightnessVal').textContent = parseFloat($('brightness').value).toFixed(1);
 }
 
+function updateContentCount() {
+  const bytes = new TextEncoder().encode($('text').value.trim()).length;
+  const el = $('contentCount');
+  el.textContent = bytes.toLocaleString() + ' ' + t('unit.bytes');
+  el.classList.toggle('over-limit', bytes > MAX_BYTES);
+}
+
 let currentCanvas = null; // 供下载使用
 
-function showError(msg) {
-  $('errorMsg').textContent = msg || '';
+function setStatus(msg, isError) {
+  const el = $('status');
+  el.textContent = msg || '';
+  el.classList.toggle('is-error', !!isError);
 }
 
 function generate() {
-  showError('');
+  setStatus('');
   const text = $('text').value.trim();
-  if (!text) { showError('请输入要生成二维码的内容'); return; }
+  if (!text) { setStatus(t('err.empty'), true); return; }
 
   const ecl = $('level').value;
   const version = parseInt($('version').value, 10);
@@ -236,7 +357,7 @@ function generate() {
   try {
     matrix = buildMatrix(text, ecl, version);
   } catch (e) {
-    showError('内容过长或版本不合适：请改用「自动」版本，或降低容错等级。');
+    setStatus(t('err.tooLong'), true);
     return;
   }
   const { qr, version: realVer, count } = matrix;
@@ -253,7 +374,8 @@ function generate() {
 
   currentCanvas = $('canvas');
   $('download').disabled = false;
-  $('meta').textContent = `版本 ${realVer} · 尺寸 ${count}×${count} 模块 · 容错 ${ecl}`;
+  $('meta').textContent = t('meta.fmt', { ver: realVer, count, ecl });
+  setStatus(t('status.generated'));
 }
 
 function setupPicturePreview() {
@@ -298,8 +420,33 @@ let initialized = false;
 function init() {
   if (initialized) return; // 幂等保护：避免重复触发导致事件重复绑定
   initialized = true;
+
+  // 主题（与御风站一致：localStorage 记忆，默认深色）
+  const root = document.documentElement;
+  let savedTheme = null, savedLang = null;
+  try { savedTheme = localStorage.getItem('yf-theme'); } catch (e) {}
+  if (savedTheme) root.setAttribute('data-theme', savedTheme);
+  try { savedLang = localStorage.getItem('yf-lang'); } catch (e) {}
+  if (savedLang) currentLang = savedLang;
+
+  applyLang();
+
+  $('theme-toggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('yf-theme', next); } catch (e) {}
+  });
+
+  $('lang-toggle').addEventListener('click', () => {
+    currentLang = currentLang === 'zh' ? 'en' : 'zh';
+    try { localStorage.setItem('yf-lang', currentLang); } catch (e) {}
+    applyLang();
+    generate(); // 刷新动态文案（状态/版本信息/字节数）
+  });
+
   fillVersionOptions();
   updateSliderLabels();
+  updateContentCount();
 
   ['scale', 'contrast', 'brightness'].forEach((id) => {
     $(id).addEventListener('input', updateSliderLabels);
@@ -309,18 +456,33 @@ function init() {
   $('generate').addEventListener('click', generate);
   $('download').addEventListener('click', download);
 
-  // 输入变化后自动重生成（防抖）
-  let t;
-  const autoInputs = ['text', 'level', 'version', 'scale', 'colorized', 'contrast', 'brightness'];
-  autoInputs.forEach((id) => {
-    $(id).addEventListener('change', () => {
-      clearTimeout(t);
-      t = setTimeout(generate, 350);
+  // 快速模板
+  document.querySelectorAll('.template-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      $('text').value = btn.dataset.template;
+      updateContentCount();
+      generate();
     });
   });
-  $('picture').addEventListener('change', () => { clearTimeout(t); t = setTimeout(generate, 400); });
 
-  // 首次生成
+  // 输入变化后自动重生成（防抖）
+  let debounceTimer;
+  const autoInputs = ['level', 'version', 'scale', 'colorized', 'contrast', 'brightness'];
+  autoInputs.forEach((id) => {
+    $(id).addEventListener('change', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(generate, 350);
+    });
+  });
+  $('text').addEventListener('input', () => {
+    updateContentCount();
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(generate, 350);
+  });
+  $('picture').addEventListener('change', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(generate, 400); });
+
+  // 首次生成 + 默认提示
+  setStatus(t('status.default'));
   generate();
 }
 

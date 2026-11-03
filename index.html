@@ -1,89 +1,135 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="data:," />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0b0f">
+  <meta name="description" content="艺术二维码生成器 - 纯前端生成带背景图的艺术二维码，支持中英文，图片不离开浏览器。">
+  <link rel="icon" href="data:,">
   <title>艺术二维码生成器 · QR Art Studio</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <h1>艺术二维码生成器</h1>
-    <p class="subtitle">纯静态 · 本地生成 · 不上传任何数据</p>
+  <div class="aurora" aria-hidden="true"></div>
+
+  <header class="shell topbar">
+    <a class="wordmark" href="index.html" aria-label="QR Art Studio">
+      <span class="mark">Q</span>
+      <span data-i18n="brand">御风 YUFENG</span>
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a href="index.html" data-i18n="nav.home">首页</a>
+      <button class="lang-toggle" id="lang-toggle" type="button" aria-label="切换语言">EN</button>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换主题">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8"></path></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"></path></svg>
+      </button>
+    </nav>
   </header>
 
-  <main class="layout">
-    <!-- 控制面板 -->
-    <section class="panel controls">
-      <div class="field">
-        <label for="text">内容（网址 / 文字 / 任意文本）</label>
-        <textarea id="text" rows="3" placeholder="https://example.com 或 你好世界">https://example.com</textarea>
-        <div class="hint" id="capacityHint"></div>
-      </div>
-
-      <div class="field">
-        <label for="picture">背景图（可选，留空为普通二维码）</label>
-        <input type="file" id="picture" accept="image/*" />
-        <div class="thumb-wrap"><img id="picPreview" alt="背景图预览" hidden /></div>
-        <label class="checkbox">
-          <input type="checkbox" id="colorized" />
-          彩色（不勾则为灰度艺术二维码）
-        </label>
-      </div>
-
-      <div class="row">
-        <div class="field">
-          <label for="level">容错等级</label>
-          <select id="level">
-            <option value="L">L（低 7%）</option>
-            <option value="M">M（中 15%）</option>
-            <option value="Q">Q（较高 25%）</option>
-            <option value="H" selected>H（高 30%）</option>
-          </select>
+  <main class="shell">
+    <section class="tool-card">
+      <div class="tool-head">
+        <div>
+          <div class="crumbs" data-i18n="crumbs">工具 / QR ART</div>
+          <h1 data-i18n="h1">艺术二维码生成器</h1>
         </div>
-        <div class="field">
-          <label for="version">版本</label>
-          <select id="version">
-            <option value="0" selected>自动</option>
-            <!-- 1..40 由 JS 填充 -->
-          </select>
-        </div>
+        <p class="subtitle" data-i18n="subtitle">纯静态 · 本地生成 · 不上传任何数据</p>
       </div>
 
-      <div class="field">
-        <label for="scale">清晰度（像素/模块）：<span id="scaleVal">10</span></label>
-        <input type="range" id="scale" min="4" max="20" step="2" value="10" />
-      </div>
+      <div class="tool-body">
+        <!-- 控制面板 -->
+        <div class="panel">
+          <label class="label" for="text">
+            <span data-i18n="content.label">内容（网址 / 文字 / 任意文本）</span>
+          </label>
+          <textarea id="text" rows="3" data-i18n-placeholder="content.placeholder" placeholder="https://example.com 或 你好世界">https://example.com</textarea>
+          <div class="content-meta">
+            <span class="hint" id="capacityHint" data-i18n="content.hint">内容最多约 500 个汉字；越短越易扫。</span>
+            <span id="contentCount">0 字节</span>
+          </div>
 
-      <details class="advanced">
-        <summary>高级：图像调节</summary>
-        <div class="field">
-          <label for="contrast">对比度：<span id="contrastVal">1.0</span></label>
-          <input type="range" id="contrast" min="0.2" max="2.5" step="0.1" value="1.0" />
+          <div class="quick-actions" aria-label="快速模板">
+            <button type="button" class="template-btn" data-template="https://example.com" data-i18n="quick.link">链接</button>
+            <button type="button" class="template-btn" data-template="微信号：yufeng_99432" data-i18n="quick.wechat">微信</button>
+            <button type="button" class="template-btn" data-template="电话：13888888888" data-i18n="quick.phone">电话</button>
+            <button type="button" class="template-btn" data-template="邮箱：994327432@qq.com" data-i18n="quick.email">邮箱</button>
+          </div>
+
+          <div class="field">
+            <label class="label" for="picture">
+              <span data-i18n="pic.label">背景图（可选，留空为普通二维码）</span>
+            </label>
+            <input type="file" id="picture" accept="image/*" />
+            <div class="thumb-wrap"><img id="picPreview" alt="背景图预览" hidden /></div>
+            <label class="checkbox">
+              <input type="checkbox" id="colorized" />
+              <span data-i18n="pic.colorized">彩色（不勾则为灰度艺术二维码）</span>
+            </label>
+          </div>
+
+          <div class="settings">
+            <div class="field">
+              <label for="level"><span data-i18n="level.label">容错等级</span></label>
+              <select id="level">
+                <option value="L" data-i18n="level.L">L（低 7%）</option>
+                <option value="M" data-i18n="level.M">M（中 15%）</option>
+                <option value="Q" data-i18n="level.Q">Q（较高 25%）</option>
+                <option value="H" selected data-i18n="level.H">H（高 30%）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="version"><span data-i18n="version.label">版本</span></label>
+              <select id="version">
+                <option value="0" selected data-i18n="version.auto">自动</option>
+                <!-- 1..40 由 JS 填充 -->
+              </select>
+            </div>
+            <div class="field field-wide">
+              <label for="scale">
+                <span data-i18n="scale.label">清晰度（像素/模块）：</span><span id="scaleVal">10</span>
+              </label>
+              <input type="range" id="scale" min="4" max="20" step="2" value="10" />
+            </div>
+          </div>
+
+          <details class="advanced">
+            <summary data-i18n="advanced">高级：图像调节</summary>
+            <div class="field">
+              <label for="contrast">
+                <span data-i18n="contrast.label">对比度：</span><span id="contrastVal">1.0</span>
+              </label>
+              <input type="range" id="contrast" min="0.2" max="2.5" step="0.1" value="1.0" />
+            </div>
+            <div class="field">
+              <label for="brightness">
+                <span data-i18n="brightness.label">亮度：</span><span id="brightnessVal">1.0</span>
+              </label>
+              <input type="range" id="brightness" min="0.2" max="2.5" step="0.1" value="1.0" />
+            </div>
+          </details>
+
+          <div class="actions">
+            <button type="button" class="primary" id="generate" data-i18n="generate">生成</button>
+            <button type="button" class="ghost" id="download" disabled data-i18n="download">下载 PNG</button>
+          </div>
+
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+          <div class="meta" id="meta"></div>
         </div>
-        <div class="field">
-          <label for="brightness">亮度：<span id="brightnessVal">1.0</span></label>
-          <input type="range" id="brightness" min="0.2" max="2.5" step="0.1" value="1.0" />
+
+        <!-- 预览 -->
+        <div class="panel preview">
+          <div class="canvas-wrap">
+            <canvas id="canvas" width="400" height="400" role="img" aria-label="二维码预览"></canvas>
+          </div>
         </div>
-      </details>
-
-      <div class="actions">
-        <button id="generate" class="primary">生成</button>
-        <button id="download" disabled>下载 PNG</button>
       </div>
-      <div class="error" id="errorMsg"></div>
-    </section>
-
-    <!-- 预览 -->
-    <section class="panel preview">
-      <canvas id="canvas" width="400" height="400"></canvas>
-      <div class="meta" id="meta"></div>
     </section>
   </main>
 
-  <footer class="footer">
-    全部在浏览器本地完成，图片不会离开你的电脑。
+  <footer class="shell">
+    <span data-i18n="footer">全部在浏览器本地完成，图片不会离开你的电脑。</span>
   </footer>
 
   <script src="js/qrcode.min.js"></script>
