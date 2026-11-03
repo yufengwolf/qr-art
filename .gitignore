@@ -1,0 +1,8 @@
+# 依赖/构建产物（本项目纯静态，无依赖）
+node_modules/
+.DS_Store
+*.log
+
+# 本地生成的二维码产物
+*.png
+!js/qrcode.min.js

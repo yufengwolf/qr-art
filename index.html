@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>艺术二维码生成器 · QR Art Studio</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>艺术二维码生成器</h1>
+    <p class="subtitle">纯静态 · 本地生成 · 不上传任何数据</p>
+  </header>
+
+  <main class="layout">
+    <!-- 控制面板 -->
+    <section class="panel controls">
+      <div class="field">
+        <label for="text">内容（网址 / 文字 / 任意文本）</label>
+        <textarea id="text" rows="3" placeholder="https://example.com 或 你好世界">https://example.com</textarea>
+        <div class="hint" id="capacityHint"></div>
+      </div>
+
+      <div class="field">
+        <label for="picture">背景图（可选，留空为普通二维码）</label>
+        <input type="file" id="picture" accept="image/*" />
+        <div class="thumb-wrap"><img id="picPreview" alt="背景图预览" hidden /></div>
+        <label class="checkbox">
+          <input type="checkbox" id="colorized" />
+          彩色（不勾则为灰度艺术二维码）
+        </label>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="level">容错等级</label>
+          <select id="level">
+            <option value="L">L（低 7%）</option>
+            <option value="M">M（中 15%）</option>
+            <option value="Q">Q（较高 25%）</option>
+            <option value="H" selected>H（高 30%）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="version">版本</label>
+          <select id="version">
+            <option value="0" selected>自动</option>
+            <!-- 1..40 由 JS 填充 -->
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="scale">清晰度（像素/模块）：<span id="scaleVal">10</span></label>
+        <input type="range" id="scale" min="4" max="20" step="2" value="10" />
+      </div>
+
+      <details class="advanced">
+        <summary>高级：图像调节</summary>
+        <div class="field">
+          <label for="contrast">对比度：<span id="contrastVal">1.0</span></label>
+          <input type="range" id="contrast" min="0.2" max="2.5" step="0.1" value="1.0" />
+        </div>
+        <div class="field">
+          <label for="brightness">亮度：<span id="brightnessVal">1.0</span></label>
+          <input type="range" id="brightness" min="0.2" max="2.5" step="0.1" value="1.0" />
+        </div>
+      </details>
+
+      <div class="actions">
+        <button id="generate" class="primary">生成</button>
+        <button id="download" disabled>下载 PNG</button>
+      </div>
+      <div class="error" id="errorMsg"></div>
+    </section>
+
+    <!-- 预览 -->
+    <section class="panel preview">
+      <canvas id="canvas" width="400" height="400"></canvas>
+      <div class="meta" id="meta"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    灵感来自 <a href="https://github.com/x-hw/amazing-qr" target="_blank" rel="noreferrer">amazing-qr</a> 的「艺术融合」思路，
+    二维码内核使用 <a href="https://github.com/kazuhikoarase/qrcode-generator" target="_blank" rel="noreferrer">qrcode-generator</a>（MIT）。
+    全部在浏览器本地完成，图片不会离开你的电脑。
+  </footer>
+
+  <script src="js/qrcode.min.js"></script>
+  <script src="js/qr-art.js"></script>
+</body>
+</html>
